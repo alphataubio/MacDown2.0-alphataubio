@@ -28,6 +28,22 @@ struct EditorPane: NSViewRepresentable {
     /// The user changed the text (typing, paste, undo): the workspace turns a preview tab into a regular one.
     var onUserEdit: ((MarkdownDocument) -> Void)?
 
+    init(
+        document: MarkdownDocument,
+        scrollSync: ScrollSyncController,
+        editor: EditorHandle? = nil,
+        status: EditorStatus? = nil,
+        flavor: (any DocumentFlavor)? = nil,
+        onUserEdit: ((MarkdownDocument) -> Void)? = nil
+    ) {
+        self.document = document
+        self.scrollSync = scrollSync
+        self.editor = editor
+        self.status = status
+        self.flavor = flavor
+        self.onUserEdit = onUserEdit
+    }
+
     func makeCoordinator() -> Coordinator { Coordinator(scrollSync: scrollSync) }
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -68,8 +84,13 @@ struct EditorPane: NSViewRepresentable {
         // A user theme edited on disk keeps its name: the store's revision says the colours may have changed.
         let revision = UserThemeFolder.store.revision
         if textView.theme.name != theme.name || textView.theme.font != theme.font || context.coordinator.themeRevision != revision {
+            let fontChanged = textView.theme.font != theme.font
+            let line = fontChanged ? textView.topVisibleLine : 0
             context.coordinator.themeRevision = revision
             textView.theme = theme
+            if fontChanged {
+                textView.scroll(toLine: line)
+            }
         }
     }
 
