@@ -281,4 +281,32 @@ describe('scroll sync (preview page, headless Chrome)', { skip: !chromeAvailable
       await page.close();
     }
   });
+
+  test('zoom in and out preserves scroll position and keeps scroll sync accurate', async () => {
+    const md = `${lorem(30)}\n# Target Heading\n\n${lorem(50, 40)}`;
+    const target = md.split('\n').indexOf('# Target Heading');
+    const page = await open(md);
+    try {
+      await page.eval(`MacDown2Preview.scrollToLine(${target})`);
+      const line0 = await page.eval('MacDown2Preview.visibleTopLine()');
+      assert.ok(Math.abs(line0 - target) < 0.1, `initially at target line ${target}, got ${line0}`);
+
+      for (const factor of [1.5, 2.0, 0.75, 1.0]) {
+        await page.eval(`MacDown2Preview.setZoom(${factor})`);
+        const lineAfterZoom = await page.eval('MacDown2Preview.visibleTopLine()');
+        assert.ok(Math.abs(lineAfterZoom - target) < 0.1, `after zooming to ${factor}, top line is ${lineAfterZoom}, wanted ${target}`);
+
+        // Scroll to another line at this zoom level
+        const nextTarget = target + 15;
+        await page.eval(`MacDown2Preview.scrollToLine(${nextTarget})`);
+        const lineAfterScroll = await page.eval('MacDown2Preview.visibleTopLine()');
+        assert.ok(Math.abs(lineAfterScroll - nextTarget) < 0.1, `at zoom ${factor}, scrolled to ${nextTarget}, got ${lineAfterScroll}`);
+
+        // Restore back to target for next iteration
+        await page.eval(`MacDown2Preview.scrollToLine(${target})`);
+      }
+    } finally {
+      await page.close();
+    }
+  });
 });
