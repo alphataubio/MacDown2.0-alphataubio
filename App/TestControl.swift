@@ -208,7 +208,7 @@ enum TestControl {
         case "editor":
             let editor = try self.editor(in: try window(args))
             let selection = editor.selectedRange()
-            return ["text": editor.string, "selection": [selection.location, selection.length], "marked": editor.hasMarkedText()]
+            return ["text": editor.string, "selection": [selection.location, selection.length], "marked": editor.hasMarkedText(), "topLine": editor.topVisibleLine]
         case "select":
             let editor = try self.editor(in: try window(args))
             guard let from = int(args, "from"), let to = int(args, "to"), 0 <= from, from <= to, to <= (editor.string as NSString).length else { throw Failure(message: "select needs 0 <= from <= to <= length") }
