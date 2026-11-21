@@ -647,7 +647,12 @@ public final class MarkdownTextView: NSTextView {
     public var topVisibleLine: Double {
         guard let layout = textLayoutManager, let content = layout.textContentManager else { return 0 }
         let y = max(0, visibleRect.minY - textContainerOrigin.y)
-        guard let fragment = layout.textLayoutFragment(for: CGPoint(x: 0, y: y)) else { return 0 }
+        var fragment = layout.textLayoutFragment(for: CGPoint(x: 0, y: y))
+        if fragment == nil && y > 0 {
+            layout.ensureLayout(for: layout.documentRange)
+            fragment = layout.textLayoutFragment(for: CGPoint(x: 0, y: y))
+        }
+        guard let fragment else { return 0 }
         let offset = content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
         let frame = fragment.layoutFragmentFrame
         let progress = frame.height > 0 ? min(max((y - frame.minY) / frame.height, 0), 0.999) : 0
@@ -700,9 +705,9 @@ public final class MarkdownTextView: NSTextView {
         let progress = min(max(line - Double(whole), 0), 0.999)
         let offset = offsetOfLine(whole)
         guard let location = content.location(content.documentRange.location, offsetBy: offset) else { return }
-        // A fragment that was never laid out reports a zero frame; lay out just the target, then let the view adopt the
-        // grown content height (otherwise the clip view cannot scroll that far).
-        if let end = content.location(location, offsetBy: 1), let target = NSTextRange(location: location, end: end) {
+        // Lay out from document start through target so that fragment frame minY is exact and the
+        // view adopts the grown content height (otherwise clip.constrainBoundsRect clamps prematurely).
+        if let target = NSTextRange(location: content.documentRange.location, end: location) {
             layout.ensureLayout(for: target)
         }
         layoutSubtreeIfNeeded()
