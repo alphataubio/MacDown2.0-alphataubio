@@ -36,9 +36,23 @@ function leavesOf(h: BlockHandle): HTMLElement[] {
   return (h.leaves = out);
 }
 
+let rectsZoomed: boolean | null = null;
+function rectsScaleWithZoom(): boolean {
+  if (rectsZoomed !== null) return rectsZoomed;
+  if (typeof document === 'undefined') return true;
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;top:0;left:0;height:100px;zoom:2;visibility:hidden;pointer-events:none;';
+  (document.body ?? document.documentElement).appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  return (rectsZoomed = h > 150);
+}
+
 const boxOf = (el: Element): { top: number; bottom: number } => {
   const r = el.getBoundingClientRect();
-  return { top: r.top + scrollY, bottom: r.bottom + scrollY };
+  const z = Number(document.documentElement.style.zoom) || 1;
+  const scale = z !== 1 && !rectsScaleWithZoom() ? z : 1;
+  return { top: (r.top + scrollY) * scale, bottom: (r.bottom + scrollY) * scale };
 };
 
 function blockAnchor(blocks: BlockHandle[], i: number): Anchor {
